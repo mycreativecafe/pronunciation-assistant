@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PronouncePro - Speech & Reading Assistant</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.4);
+            border-radius: 3px;
+        }
+        /* Reading Word Highlights */
+        .word-token {
+            display: inline-block;
+            padding: 2px 4px;
+            margin: 1px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .word-token:hover {
+            background-color: rgba(14, 165, 233, 0.15);
+            transform: translateY(-1px);
+        }
+        .word-correct {
+            background-color: rgba(34, 197, 94, 0.2) !important;
+            color: #15803d !important;
+            font-weight: 500;
+        }
+        .dark .word-correct {
+            background-color: rgba(34, 197, 94, 0.25) !important;
+            color: #4ade80 !important;
+        }
+        .word-incorrect {
+            background-color: rgba(239, 68, 68, 0.2) !important;
+            color: #b91c1c !important;
+            text-decoration: underline decoration-wavy #ef4444;
+        }
+        .dark .word-incorrect {
+            background-color: rgba(239, 68, 68, 0.25) !important;
+            color: #fca5a5 !important;
+        }
+        .word-speaking {
+            background-color: rgba(14, 165, 233, 0.3) !important;
+            border-bottom: 2px solid #0ea5e9;
+        }
+        /* Pulsing animation for microphone recording state */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .recording-pulse {
+            animation: pulse-ring 1.8s infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-full flex flex-col transition-colors duration-200">
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-brand-600 text-white p-2 rounded-xl shadow-md">
+                    <i data-lucide="mic" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">PronouncePro</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Reading & Speech Correction Assistant</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-3">
+                <button id="themeToggleBtn" class="p-2 rounded-lg text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                    <i data-lucide="moon" id="themeIcon" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left / Top Column: Controls & Text Input -->
+        <section class="lg:col-span-7 flex flex-col space-y-4">
+            
+            <!-- News Selector & Custom Input Box -->
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-700/60">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                    <label class="font-semibold text-sm flex items-center gap-2">
+                        <i data-lucide="newspaper" class="w-4 h-4 text-brand-600"></i>
+                        Select Article or News Passage
+                    </label>
+                    <select id="articlePreset" class="text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="tech">Tech: Renewable Energy Innovations</option>
+                        <option value="world">World: The Art of Daily Habits</option>
+                        <option value="science">Science: Deep Sea Discoveries</option>
+                        <option value="custom">-- Custom / Paste Text --</option>
+                    </select>
+                </div>
+
+                <div id="customInputGroup" class="hidden mb-4">
+                    <textarea id="customTextInput" rows="4" placeholder="Paste news article or any paragraph here to practice reading aloud..." class="w-full p-3 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
+                    <button id="loadCustomBtn" class="mt-2 text-xs bg-brand-600 hover:bg-brand-700 text-white font-medium py-1.5 px-4 rounded-lg transition">Load Custom Text</button>
+                </div>
+
+                <!-- Text Display Area (Interactive Reading Box) -->
+                <div class="relative bg-slate-50/70 dark:bg-slate-900/60 rounded-xl p-5 border border-slate-200 dark:border-slate-800 min-h-[220px]">
+                    <div class="text-xs text-slate-400 mb-2 flex items-center justify-between">
+                        <span>Click any word to hear standard native pronunciation</span>
+                        <span id="wordCountLabel" class="font-mono">0 words</span>
+                    </div>
+                    <div id="readingContainer" class="text-lg leading-relaxed font-normal tracking-wide space-x-1 select-text">
+                        <!-- Words will be dynamically generated as interactive tokens -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Speech Audio Playback Controls -->
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-700/60 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-semibold text-sm flex items-center gap-2">
+                        <i data-lucide="volume-2" class="w-4 h-4 text-brand-600"></i>
+                        Native Audio Reader (TTS)
+                    </h3>
+                    <span class="text-xs text-slate-400">Listen before practicing</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">Voice Accent</label>
+                        <select id="voiceSelect" class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <!-- Populated via JS -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">Playback Speed</label>
+                        <div class="flex gap-2">
+                            <button data-speed="0.75" class="speed-btn text-xs flex-1 py-1.5 border border-slate-300 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">0.75x</button>
+                            <button data-speed="1.0" class="speed-btn text-xs flex-1 py-1.5 border border-brand-500 bg-brand-50 dark:bg-brand-900/30 text-brand-600 font-semibold rounded-lg transition">1.0x</button>
+                            <button data-speed="1.25" class="speed-btn text-xs flex-1 py-1.5 border border-slate-300 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">1.25x</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 pt-2">
+                    <button id="playArticleBtn" class="flex-1 flex items-center justify-center gap-2 bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 text-white font-medium py-2.5 px-4 rounded-xl transition shadow-sm">
+                        <i data-lucide="play" class="w-4 h-4"></i>
+                        <span>Listen to Native Reader</span>
+                    </button>
+                    <button id="stopArticleBtn" class="hidden flex items-center justify-center gap-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 font-medium py-2.5 px-4 rounded-xl transition">
+                        <i data-lucide="square" class="w-4 h-4"></i>
+                        <span>Stop</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Interactive Recording Button -->
+            <div class="bg-gradient-to-r from-brand-600 to-brand-700 rounded-2xl p-6 text-white shadow-lg flex flex-col items-center text-center justify-center space-y-4">
+                <div>
+                    <h3 class="text-lg font-bold">Ready to Practice Reading?</h3>
+                    <p class="text-xs text-brand-100 mt-1">Click start, speak clearly into your microphone, and read the article aloud.</p>
+                </div>
+
+                <button id="micRecordBtn" class="bg-white text-brand-700 hover:bg-brand-50 font-semibold px-8 py-3.5 rounded-full shadow-md flex items-center gap-3 transition transform active:scale-95">
+                    <div id="micIconWrapper" class="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-600">
+                        <i data-lucide="mic" class="w-5 h-5"></i>
+                    </div>
+                    <span id="micRecordText" class="text-base">Start Reading Aloud</span>
+                </button>
+
+                <div id="liveTranscriptBox" class="w-full hidden bg-brand-800/50 backdrop-blur-sm rounded-xl p-3 text-xs text-left text-brand-100 max-h-20 overflow-y-auto border border-brand-500/30">
+                    <span class="font-semibold text-white">Live Voice Transcript: </span>
+                    <span id="liveTranscriptText" class="italic">Listening...</span>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Right / Bottom Column: Pronunciation Analysis & Feedback -->
+        <section class="lg:col-span-5 flex flex-col space-y-4">
+            
+            <!-- Accuracy & Stats Panel -->
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-700/60">
+                <h3 class="font-semibold text-sm flex items-center gap-2 mb-4">
+                    <i data-lucide="bar-chart-2" class="w-4 h-4 text-brand-600"></i>
+                    Pronunciation Feedback
+                </h3>
+
+                <div class="grid grid-cols-3 gap-3 text-center mb-4">
+                    <div class="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800">
+                        <div id="accuracyScore" class="text-2xl font-bold text-brand-600">--%</div>
+                        <div class="text-[10px] uppercase font-semibold text-slate-400 mt-1">Accuracy</div>
+                    </div>
+                    <div class="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800">
+                        <div id="correctWordsCount" class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">0</div>
+                        <div class="text-[10px] uppercase font-semibold text-slate-400 mt-1">Matched</div>
+                    </div>
+                    <div class="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800">
+                        <div id="missedWordsCount" class="text-2xl font-bold text-rose-600 dark:text-rose-400">0</div>
+                        <div class="text-[10px] uppercase font-semibold text-slate-400 mt-1">Needs Practice</div>
+                    </div>
+                </div>
+
+                <!-- Guidance Legend -->
+                <div class="flex items-center justify-around text-xs text-slate-500 py-2 border-t border-b border-slate-100 dark:border-slate-700/50">
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full bg-emerald-500/30 border border-emerald-500"></span>
+                        Correct
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full bg-rose-500/30 border border-rose-500"></span>
+                        Missed/Needs Work
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full bg-slate-200 dark:bg-slate-700"></span>
+                        Unread
+                    </span>
+                </div>
+            </div>
+
+            <!-- List of Mispronounced / Missed Words for Practice -->
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-700/60 flex-grow flex flex-col">
+                <h4 class="font-semibold text-xs uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                    <i data-lucide="target" class="w-4 h-4 text-rose-500"></i>
+                    Targeted Word Practice
+                </h4>
+
+                <div id="mispronouncedList" class="flex-grow space-y-2 overflow-y-auto max-h-[320px] pr-1">
+                    <div id="emptyStateFeedback" class="text-center py-10 text-slate-400 text-xs">
+                        <i data-lucide="check-circle-2" class="w-8 h-8 mx-auto mb-2 stroke-1 opacity-50"></i>
+                        Start reading aloud to analyze your speech accuracy and pinpoint mispronounced words.
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- App Logic Script -->
+    <script>
+        // --- Sample Articles ---
+        const ARTICLES = {
+            tech: "Clean energy technology is expanding at an unprecedented pace worldwide. Solar power and wind turbines are becoming significantly more efficient and cost effective. Engineers are actively designing next generation batteries to store renewable energy for cloudy days.",
+            world: "Developing micro daily habits can lead to remarkable long term personal growth. Reading ten pages of a book or practicing a foreign language for fifteen minutes every morning builds strong mental discipline over time.",
+            science: "Oceanographers exploring deep ocean trenches have uncovered unique ecosystems thriving in complete darkness. Organisms residing near hydrothermal vents rely on chemical energy rather than sunlight to sustain life."
+        };
+
+        // --- App State ---
+        let currentText = ARTICLES.tech;
+        let originalWords = [];
+        let synth = window.speechSynthesis;
+        let recognition = null;
+        let isRecording = false;
+        let currentSpeechRate = 1.0;
+        let selectedVoice = null;
+        let voicesList = [];
+
+        // --- DOM Elements ---
+        const readingContainer = document.getElementById('readingContainer');
+        const articlePreset = document.getElementById('articlePreset');
+        const customInputGroup = document.getElementById('customInputGroup');
+        const customTextInput = document.getElementById('customTextInput');
+        const loadCustomBtn = document.getElementById('loadCustomBtn');
+        const wordCountLabel = document.getElementById('wordCountLabel');
+        
+        const voiceSelect = document.getElementById('voiceSelect');
+        const speedBtns = document.querySelectorAll('.speed-btn');
+        const playArticleBtn = document.getElementById('playArticleBtn');
+        const stopArticleBtn = document.getElementById('stopArticleBtn');
+
+        const micRecordBtn = document.getElementById('micRecordBtn');
+        const micRecordText = document.getElementById('micRecordText');
+        const micIconWrapper = document.getElementById('micIconWrapper');
+        const liveTranscriptBox = document.getElementById('liveTranscriptBox');
+        const liveTranscriptText = document.getElementById('liveTranscriptText');
+
+        const accuracyScore = document.getElementById('accuracyScore');
+        const correctWordsCount = document.getElementById('correctWordsCount');
+        const missedWordsCount = document.getElementById('missedWordsCount');
+        const mispronouncedList = document.getElementById('mispronouncedList');
+
+        const themeToggleBtn = document.getElementById('themeToggleBtn');
+        const themeIcon = document.getElementById('themeIcon');
+
+        // --- Initialization ---
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            initTheme();
+            setupText(currentText);
+            initTTSVoices();
+            initSpeechRecognition();
+        });
+
+        // Dark/Light Theme Handler
+        function initTheme() {
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.classList.add('dark');
+            }
+            themeToggleBtn.addEventListener('click', () => {
+                document.documentElement.classList.toggle('dark');
+                const isDark = document.documentElement.classList.contains('dark');
+                themeIcon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+                lucide.createIcons();
+            });
+        }
+
+        // --- Render & Setup Text ---
+        function setupText(text) {
+            currentText = text;
+            // Clean and split words
+            const rawTokens = text.trim().split(/\s+/);
+            originalWords = rawTokens.map((rawWord, index) => {
+                const cleaned = rawWord.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+                return {
+                    id: index,
+                    raw: rawWord,
+                    cleaned: cleaned,
+                    status: 'unread' // 'unread', 'correct', 'incorrect'
+                };
+            });
+
+            wordCountLabel.textContent = `${originalWords.length} words`;
+            renderTextTokens();
+            resetStats();
+        }
+
+        function renderTextTokens() {
+            readingContainer.innerHTML = '';
+            originalWords.forEach((wordObj) => {
+                const span = document.createElement('span');
+                span.className = `word-token word-${wordObj.status}`;
+                span.dataset.id = wordObj.id;
+                span.textContent = wordObj.raw + ' ';
+                
+                // Click individual word to listen
+                span.addEventListener('click', () => {
+                    speakSingleWord(wordObj.raw);
+                });
+
+                readingContainer.appendChild(span);
+            });
+        }
+
+        function resetStats() {
+            accuracyScore.textContent = '--%';
+            correctWordsCount.textContent = '0';
+            missedWordsCount.textContent = '0';
+            mispronouncedList.innerHTML = `
+                <div id="emptyStateFeedback" class="text-center py-10 text-slate-400 text-xs">
+                    <i data-lucide="check-circle-2" class="w-8 h-8 mx-auto mb-2 stroke-1 opacity-50"></i>
+                    Start reading aloud to analyze your speech accuracy and pinpoint mispronounced words.
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        // --- Text-To-Speech (Native Audio Reader) ---
+        function initTTSVoices() {
+            if (!('speechSynthesis' in window)) {
+                alert('Text-to-speech is not fully supported in this browser.');
+                return;
+            }
+
+            function populateVoices() {
+                voicesList = synth.getVoices().filter(v => v.lang.includes('en'));
+                voiceSelect.innerHTML = '';
+
+                if (voicesList.length === 0) {
+                    const opt = document.createElement('option');
+                    opt.textContent = 'Default English Voice';
+                    voiceSelect.appendChild(opt);
+                    return;
+                }
+
+                voicesList.forEach((voice, i) => {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = `${voice.name} (${voice.lang})`;
+                    if (voice.default || voice.lang === 'en-US') option.selected = true;
+                    voiceSelect.appendChild(option);
+                });
+                selectedVoice = voicesList[voiceSelect.value] || null;
+            }
+
+            populateVoices();
+            if (speechSynthesis.onvoiceschanged !== undefined) {
+                speechSynthesis.onvoiceschanged = populateVoices;
+            }
+
+            voiceSelect.addEventListener('change', () => {
+                selectedVoice = voicesList[voiceSelect.value];
+            });
+
+            // Speed Buttons
+            speedBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    speedBtns.forEach(b => {
+                        b.classList.remove('border-brand-500', 'bg-brand-50', 'dark:bg-brand-900/30', 'text-brand-600', 'font-semibold');
+                        b.classList.add('border-slate-300', 'dark:border-slate-700');
+                    });
+                    btn.classList.add('border-brand-500', 'bg-brand-50', 'dark:bg-brand-900/30', 'text-brand-600', 'font-semibold');
+                    btn.classList.remove('border-slate-300', 'dark:border-slate-700');
+                    currentSpeechRate = parseFloat(btn.dataset.speed);
+                });
+            });
+        }
+
+        function speakSingleWord(word) {
+            synth.cancel(); // Stop ongoing speech
+            const clean = word.replace(/[^a-zA-Z]/g, "");
+            const utterance = new SpeechSynthesisUtterance(clean);
+            if (selectedVoice) utterance.voice = selectedVoice;
+            utterance.rate = currentSpeechRate;
+            synth.speak(utterance);
+        }
+
+        function playFullArticle() {
+            synth.cancel();
+            if (isRecording) stopRecording();
+
+            const utterance = new SpeechSynthesisUtterance(currentText);
+            if (selectedVoice) utterance.voice = selectedVoice;
+            utterance.rate = currentSpeechRate;
+
+            playArticleBtn.classList.add('hidden');
+            stopArticleBtn.classList.remove('hidden');
+
+            utterance.onend = () => {
+                playArticleBtn.classList.remove('hidden');
+                stopArticleBtn.classList.add('hidden');
+            };
+
+            synth.speak(utterance);
+        }
+
+        playArticleBtn.addEventListener('click', playFullArticle);
+        stopArticleBtn.addEventListener('click', () => {
+            synth.cancel();
+            playArticleBtn.classList.remove('hidden');
+            stopArticleBtn.classList.add('hidden');
+        });
+
+        // --- Speech Recognition (User Voice Practice) ---
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+            if (!SpeechRecognition) {
+                micRecordText.textContent = "Speech API Not Supported";
+                micRecordBtn.disabled = true;
+                micRecordBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                return;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                isRecording = true;
+                micRecordText.textContent = "Stop & Check Score";
+                micRecordBtn.classList.remove('bg-white', 'text-brand-700');
+                micRecordBtn.classList.add('bg-rose-600', 'text-white', 'recording-pulse');
+                micIconWrapper.className = "w-8 h-8 rounded-full bg-rose-700 flex items-center justify-center text-white";
+                liveTranscriptBox.classList.remove('hidden');
+                liveTranscriptText.textContent = "Listening to your reading...";
+            };
+
+            recognition.onresult = (event) => {
+                let fullTranscript = '';
+                for (let i = 0; i < event.results.length; i++) {
+                    fullTranscript += event.results[i][0].transcript + ' ';
+                }
+                liveTranscriptText.textContent = fullTranscript;
+                evaluateSpeech(fullTranscript);
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                if (event.error === 'not-allowed') {
+                    alert('Microphone permission denied. Please allow microphone access to practice reading.');
+                }
+                stopRecording();
+            };
+
+            recognition.onend = () => {
+                if (isRecording) {
+                    // Auto-restart if continuous mode drops unexpectedly while user is active
+                    try { recognition.start(); } catch(e) {}
+                } else {
+                    micRecordText.textContent = "Start Reading Aloud";
+                    micRecordBtn.classList.remove('bg-rose-600', 'text-white', 'recording-pulse');
+                    micRecordBtn.classList.add('bg-white', 'text-brand-700');
+                    micIconWrapper.className = "w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-600";
+                }
+            };
+        }
+
+        function toggleRecording() {
+            synth.cancel(); // stop TTS if playing
+            if (!isRecording) {
+                // Reset word statuses
+                originalWords.forEach(w => w.status = 'unread');
+                renderTextTokens();
+                resetStats();
+                try {
+                    recognition.start();
+                } catch (err) {
+                    console.error("Start error", err);
+                }
+            } else {
+                stopRecording();
+            }
+        }
+
+        function stopRecording() {
+            isRecording = false;
+            if (recognition) recognition.stop();
+        }
+
+        micRecordBtn.addEventListener('click', toggleRecording);
+
+        // --- Speech Alignment Algorithm & Feedback ---
+        function evaluateSpeech(spokenText) {
+            const spokenTokens = spokenText.toLowerCase().replace(/[^a-zA-Z0-9\s]/g, "").trim().split(/\s+/);
+            
+            if (spokenTokens.length === 0 || spokenTokens[0] === "") return;
+
+            let spokenIndex = 0;
+            let correctCount = 0;
+            let missedWords = [];
+
+            // Simple sequence alignment
+            originalWords.forEach((wordObj) => {
+                const cleanTarget = wordObj.cleaned;
+
+                // Look for word in a small search window of spoken tokens to allow slight stutters
+                let matched = false;
+                for (let i = spokenIndex; i < Math.min(spokenIndex + 4, spokenTokens.length); i++) {
+                    if (spokenTokens[i] === cleanTarget) {
+                        matched = true;
+                        spokenIndex = i + 1;
+                        break;
+                    }
+                }
+
+                if (matched) {
+                    wordObj.status = 'correct';
+                    correctCount++;
+                } else {
+                    // Check if user has already spoken past this word index
+                    if (spokenIndex < spokenTokens.length) {
+                        wordObj.status = 'incorrect';
+                        missedWords.push(wordObj);
+                    } else {
+                        wordObj.status = 'unread';
+                    }
+                }
+            });
+
+            renderTextTokens();
+
+            // Calculate Score based on attempted words
+            const attemptedTotal = originalWords.filter(w => w.status !== 'unread').length;
+            const scorePercent = attemptedTotal > 0 ? Math.round((correctCount / attemptedTotal) * 100) : 0;
+
+            accuracyScore.textContent = `${scorePercent}%`;
+            correctWordsCount.textContent = correctCount;
+            missedWordsCount.textContent = missedWords.length;
+
+            updateMispronouncedList(missedWords);
+        }
+
+        function updateMispronouncedList(missedWords) {
+            if (missedWords.length === 0) {
+                mispronouncedList.innerHTML = `
+                    <div class="text-center py-8 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
+                        <i data-lucide="sparkles" class="w-6 h-6 mx-auto mb-1"></i>
+                        Great job! No mispronounced or skipped words detected so far.
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            mispronouncedList.innerHTML = '';
+            missedWords.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'flex items-center justify-between p-2.5 bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-900/40 rounded-xl text-xs';
+                card.innerHTML = `
+                    <div class="flex items-center space-x-2">
+                        <span class="font-semibold text-slate-800 dark:text-slate-200 text-sm">${item.raw}</span>
+                    </div>
+                    <button class="listen-word-btn flex items-center gap-1 text-brand-600 dark:text-brand-400 hover:text-brand-700 bg-white dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 font-medium transition shadow-sm" data-word="${item.raw}">
+                        <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
+                        <span>Listen</span>
+                    </button>
+                `;
+
+                card.querySelector('.listen-word-btn').addEventListener('click', () => {
+                    speakSingleWord(item.raw);
+                });
+
+                mispronouncedList.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        // --- Article Selection Controls ---
+        articlePreset.addEventListener('change', (e) => {
+            const val = e.target.value;
+            if (isRecording) stopRecording();
+            synth.cancel();
+
+            if (val === 'custom') {
+                customInputGroup.classList.remove('hidden');
+            } else {
+                customInputGroup.classList.add('hidden');
+                setupText(ARTICLES[val]);
+            }
+        });
+
+        loadCustomBtn.addEventListener('click', () => {
+            const customVal = customTextInput.value.trim();
+            if (customVal.length > 0) {
+                setupText(customVal);
+            }
+        });
+
+    </script>
+</body>
+</html>
