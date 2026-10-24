@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PronouncePro - Speech & Reading Assistant</title>
+    <title>Pronunciation & Reading Assistant</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -26,245 +24,178 @@
             }
         }
     </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
+        body { font-family: 'Inter', sans-serif; }
+        .word-badge { transition: all 0.15s ease; }
+        .word-badge:hover { transform: translateY(-2px); }
+        .recording-pulse {
+            animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
         }
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(156, 163, 175, 0.4);
-            border-radius: 3px;
-        }
-        /* Reading Word Highlights */
-        .word-token {
-            display: inline-block;
-            padding: 2px 4px;
-            margin: 1px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .word-token:hover {
-            background-color: rgba(14, 165, 233, 0.15);
-            transform: translateY(-1px);
-        }
-        .word-correct {
-            background-color: rgba(34, 197, 94, 0.2) !important;
-            color: #15803d !important;
-            font-weight: 500;
-        }
-        .dark .word-correct {
-            background-color: rgba(34, 197, 94, 0.25) !important;
-            color: #4ade80 !important;
-        }
-        .word-incorrect {
-            background-color: rgba(239, 68, 68, 0.2) !important;
-            color: #b91c1c !important;
-            text-decoration: underline decoration-wavy #ef4444;
-        }
-        .dark .word-incorrect {
-            background-color: rgba(239, 68, 68, 0.25) !important;
-            color: #fca5a5 !important;
-        }
-        .word-speaking {
-            background-color: rgba(14, 165, 233, 0.3) !important;
-            border-bottom: 2px solid #0ea5e9;
-        }
-        /* Pulsing animation for microphone recording state */
         @keyframes pulse-ring {
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
             70% { transform: scale(1); box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
-        .recording-pulse {
-            animation: pulse-ring 1.8s infinite;
-        }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-full flex flex-col transition-colors duration-200">
 
-    <!-- Header Navigation -->
-    <header class="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
             <div class="flex items-center space-x-3">
-                <div class="bg-brand-600 text-white p-2 rounded-xl shadow-md">
-                    <i data-lucide="mic" class="w-6 h-6"></i>
+                <div class="p-2.5 bg-brand-600 text-white rounded-xl shadow-sm">
+                    <i class="fa-solid fa-volume-high text-lg"></i>
                 </div>
                 <div>
-                    <h1 class="font-bold text-lg leading-tight">PronouncePro</h1>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">Reading & Speech Correction Assistant</p>
+                    <h1 class="font-bold text-lg leading-tight">Pronunciation Assistant</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Listen, Read Aloud & Correct Pronunciation</p>
                 </div>
             </div>
-            
+
+            <!-- Controls (Voice Selector & Theme Toggle) -->
             <div class="flex items-center space-x-3">
-                <button id="themeToggleBtn" class="p-2 rounded-lg text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
-                    <i data-lucide="moon" id="themeIcon" class="w-5 h-5"></i>
+                <div class="hidden sm:flex items-center space-x-1.5 text-xs bg-slate-100 dark:bg-slate-700 p-1.5 rounded-lg border border-slate-200 dark:border-slate-600">
+                    <i class="fa-solid fa-earth-americas text-slate-400 ml-1"></i>
+                    <select id="voiceSelect" class="bg-transparent font-medium focus:outline-none cursor-pointer pr-1">
+                        <option value="">Default Voice</option>
+                    </select>
+                </div>
+
+                <button id="themeToggleBtn" class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600" title="Toggle Theme">
+                    <i id="themeIcon" class="fa-solid fa-moon"></i>
                 </button>
             </div>
         </div>
     </header>
 
     <!-- Main Container -->
-    <main class="flex-grow max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        <!-- Left / Top Column: Controls & Text Input -->
-        <section class="lg:col-span-7 flex flex-col space-y-4">
+    <main class="flex-1 max-w-5xl w-full mx-auto p-4 md:p-6 space-y-6">
+
+        <!-- Input Section -->
+        <section class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
             
-            <!-- News Selector & Custom Input Box -->
-            <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-700/60">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                    <label class="font-semibold text-sm flex items-center gap-2">
-                        <i data-lucide="newspaper" class="w-4 h-4 text-brand-600"></i>
-                        Select Article or News Passage
-                    </label>
-                    <select id="articlePreset" class="text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500">
-                        <option value="tech">Tech: Renewable Energy Innovations</option>
-                        <option value="world">World: The Art of Daily Habits</option>
-                        <option value="science">Science: Deep Sea Discoveries</option>
-                        <option value="custom">-- Custom / Paste Text --</option>
-                    </select>
-                </div>
-
-                <div id="customInputGroup" class="hidden mb-4">
-                    <textarea id="customTextInput" rows="4" placeholder="Paste news article or any paragraph here to practice reading aloud..." class="w-full p-3 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
-                    <button id="loadCustomBtn" class="mt-2 text-xs bg-brand-600 hover:bg-brand-700 text-white font-medium py-1.5 px-4 rounded-lg transition">Load Custom Text</button>
-                </div>
-
-                <!-- Text Display Area (Interactive Reading Box) -->
-                <div class="relative bg-slate-50/70 dark:bg-slate-900/60 rounded-xl p-5 border border-slate-200 dark:border-slate-800 min-h-[220px]">
-                    <div class="text-xs text-slate-400 mb-2 flex items-center justify-between">
-                        <span>Click any word to hear standard native pronunciation</span>
-                        <span id="wordCountLabel" class="font-mono">0 words</span>
-                    </div>
-                    <div id="readingContainer" class="text-lg leading-relaxed font-normal tracking-wide space-x-1 select-text">
-                        <!-- Words will be dynamically generated as interactive tokens -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Speech Audio Playback Controls -->
-            <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-700/60 space-y-4">
-                <div class="flex items-center justify-between">
-                    <h3 class="font-semibold text-sm flex items-center gap-2">
-                        <i data-lucide="volume-2" class="w-4 h-4 text-brand-600"></i>
-                        Native Audio Reader (TTS)
-                    </h3>
-                    <span class="text-xs text-slate-400">Listen before practicing</span>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs text-slate-500 mb-1">Voice Accent</label>
-                        <select id="voiceSelect" class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
-                            <!-- Populated via JS -->
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-500 mb-1">Playback Speed</label>
-                        <div class="flex gap-2">
-                            <button data-speed="0.75" class="speed-btn text-xs flex-1 py-1.5 border border-slate-300 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">0.75x</button>
-                            <button data-speed="1.0" class="speed-btn text-xs flex-1 py-1.5 border border-brand-500 bg-brand-50 dark:bg-brand-900/30 text-brand-600 font-semibold rounded-lg transition">1.0x</button>
-                            <button data-speed="1.25" class="speed-btn text-xs flex-1 py-1.5 border border-slate-300 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">1.25x</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-3 pt-2">
-                    <button id="playArticleBtn" class="flex-1 flex items-center justify-center gap-2 bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 text-white font-medium py-2.5 px-4 rounded-xl transition shadow-sm">
-                        <i data-lucide="play" class="w-4 h-4"></i>
-                        <span>Listen to Native Reader</span>
-                    </button>
-                    <button id="stopArticleBtn" class="hidden flex items-center justify-center gap-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 font-medium py-2.5 px-4 rounded-xl transition">
-                        <i data-lucide="square" class="w-4 h-4"></i>
-                        <span>Stop</span>
+            <!-- Source Selector Tabs -->
+            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-3">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Select Input Source</span>
+                <div class="flex space-x-2">
+                    <button onclick="setSourceMode('news')" id="srcBtnNews" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 text-white shadow-sm transition-all">Sample Articles</button>
+                    <button onclick="setSourceMode('custom')" id="srcBtnCustom" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-all">Paste Text</button>
+                    <button onclick="setSourceMode('speech')" id="srcBtnSpeech" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-all flex items-center space-x-1">
+                        <i class="fa-solid fa-microphone text-red-500"></i>
+                        <span>Speak / Dictate</span>
                     </button>
                 </div>
             </div>
 
-            <!-- Main Interactive Recording Button -->
-            <div class="bg-gradient-to-r from-brand-600 to-brand-700 rounded-2xl p-6 text-white shadow-lg flex flex-col items-center text-center justify-center space-y-4">
-                <div>
-                    <h3 class="text-lg font-bold">Ready to Practice Reading?</h3>
-                    <p class="text-xs text-brand-100 mt-1">Click start, speak clearly into your microphone, and read the article aloud.</p>
+            <!-- Mode 1: News Samples -->
+            <div id="modeNews" class="space-y-2">
+                <label class="block text-xs font-semibold text-slate-500">Choose News Article:</label>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <button onclick="loadArticle(1)" class="p-3 text-left rounded-xl bg-slate-50 dark:bg-slate-700/50 hover:bg-brand-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600 transition-all text-xs">
+                        <span class="font-bold block text-brand-600 dark:text-brand-400">Tech News</span>
+                        "Artificial intelligence algorithms are transforming modern technology rapidly."
+                    </button>
+                    <button onclick="loadArticle(2)" class="p-3 text-left rounded-xl bg-slate-50 dark:bg-slate-700/50 hover:bg-brand-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600 transition-all text-xs">
+                        <span class="font-bold block text-brand-600 dark:text-brand-400">World Economy</span>
+                        "Global market fluctuations require strategic adjustments by international businesses."
+                    </button>
+                    <button onclick="loadArticle(3)" class="p-3 text-left rounded-xl bg-slate-50 dark:bg-slate-700/50 hover:bg-brand-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600 transition-all text-xs">
+                        <span class="font-bold block text-brand-600 dark:text-brand-400">Science</span>
+                        "Meteorologists predict atmospheric observations will yield extraordinary discoveries."
+                    </button>
                 </div>
+            </div>
 
-                <button id="micRecordBtn" class="bg-white text-brand-700 hover:bg-brand-50 font-semibold px-8 py-3.5 rounded-full shadow-md flex items-center gap-3 transition transform active:scale-95">
-                    <div id="micIconWrapper" class="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-600">
-                        <i data-lucide="mic" class="w-5 h-5"></i>
+            <!-- Mode 2 & 3: Textarea + Dictation -->
+            <div id="modeText" class="space-y-3">
+                <textarea id="textInput" rows="4" placeholder="Type or paste text here, or switch to 'Speak / Dictate' mode to read from a newspaper..." class="w-full p-3.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-brand-500 focus:outline-none resize-y text-sm leading-relaxed"></textarea>
+                
+                <!-- Dictation Controls (Shown when speech mode selected) -->
+                <div id="dictationBar" class="hidden flex items-center justify-between p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-xl">
+                    <div class="flex items-center space-x-2 text-xs text-red-700 dark:text-red-300 font-medium">
+                        <i class="fa-solid fa-newspaper"></i>
+                        <span>Read your newspaper aloud into the microphone:</span>
                     </div>
-                    <span id="micRecordText" class="text-base">Start Reading Aloud</span>
+                    <button id="btnDictate" onclick="toggleDictation()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center space-x-1.5 transition-all">
+                        <i class="fa-solid fa-microphone"></i>
+                        <span id="dictateBtnLabel">Start Dictating</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Load Button -->
+            <div class="flex justify-end">
+                <button onclick="processCurrentText()" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-semibold shadow-sm flex items-center space-x-2 transition-all">
+                    <i class="fa-solid fa-play"></i>
+                    <span>Load for Pronunciation Practice</span>
                 </button>
-
-                <div id="liveTranscriptBox" class="w-full hidden bg-brand-800/50 backdrop-blur-sm rounded-xl p-3 text-xs text-left text-brand-100 max-h-20 overflow-y-auto border border-brand-500/30">
-                    <span class="font-semibold text-white">Live Voice Transcript: </span>
-                    <span id="liveTranscriptText" class="italic">Listening...</span>
-                </div>
             </div>
-
         </section>
 
-        <!-- Right / Bottom Column: Pronunciation Analysis & Feedback -->
-        <section class="lg:col-span-5 flex flex-col space-y-4">
-            
-            <!-- Accuracy & Stats Panel -->
-            <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-700/60">
-                <h3 class="font-semibold text-sm flex items-center gap-2 mb-4">
-                    <i data-lucide="bar-chart-2" class="w-4 h-4 text-brand-600"></i>
-                    Pronunciation Feedback
-                </h3>
+        <!-- Status Alert -->
+        <div id="statusAlert" class="hidden p-3.5 rounded-xl text-xs border flex items-center justify-between">
+            <span id="statusMessage"></span>
+            <button onclick="dismissStatus()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+        </div>
 
-                <div class="grid grid-cols-3 gap-3 text-center mb-4">
-                    <div class="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800">
-                        <div id="accuracyScore" class="text-2xl font-bold text-brand-600">--%</div>
-                        <div class="text-[10px] uppercase font-semibold text-slate-400 mt-1">Accuracy</div>
-                    </div>
-                    <div class="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800">
-                        <div id="correctWordsCount" class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">0</div>
-                        <div class="text-[10px] uppercase font-semibold text-slate-400 mt-1">Matched</div>
-                    </div>
-                    <div class="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800">
-                        <div id="missedWordsCount" class="text-2xl font-bold text-rose-600 dark:text-rose-400">0</div>
-                        <div class="text-[10px] uppercase font-semibold text-slate-400 mt-1">Needs Practice</div>
-                    </div>
+        <!-- Interactive Pronunciation Reader Area -->
+        <section class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 space-y-5">
+            
+            <!-- Controls Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-slate-700">
+                <div class="flex items-center space-x-2">
+                    <button id="btnPlayFull" onclick="toggleFullSpeech()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl shadow-sm flex items-center space-x-1.5 transition-all">
+                        <i id="playIcon" class="fa-solid fa-volume-high"></i>
+                        <span id="playBtnText">Read Full Article</span>
+                    </button>
+                    <button onclick="stopSpeech()" class="p-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded-xl text-xs transition-all" title="Stop Audio">
+                        <i class="fa-solid fa-square"></i>
+                    </button>
                 </div>
 
-                <!-- Guidance Legend -->
-                <div class="flex items-center justify-around text-xs text-slate-500 py-2 border-t border-b border-slate-100 dark:border-slate-700/50">
-                    <span class="flex items-center gap-1.5">
-                        <span class="w-3 h-3 rounded-full bg-emerald-500/30 border border-emerald-500"></span>
-                        Correct
-                    </span>
-                    <span class="flex items-center gap-1.5">
-                        <span class="w-3 h-3 rounded-full bg-rose-500/30 border border-rose-500"></span>
-                        Missed/Needs Work
-                    </span>
-                    <span class="flex items-center gap-1.5">
-                        <span class="w-3 h-3 rounded-full bg-slate-200 dark:bg-slate-700"></span>
-                        Unread
-                    </span>
+                <!-- Speed Control -->
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs text-slate-400 font-medium">Speed:</span>
+                    <div class="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-600">
+                        <button onclick="setSpeed(0.75)" class="speed-btn px-2 py-1 rounded-lg hover:bg-white dark:hover:bg-slate-600" data-speed="0.75">0.75x</button>
+                        <button onclick="setSpeed(1.0)" class="speed-btn px-2 py-1 rounded-lg bg-white dark:bg-slate-600 shadow-sm" data-speed="1.0">1.0x</button>
+                        <button onclick="setSpeed(1.25)" class="speed-btn px-2 py-1 rounded-lg hover:bg-white dark:hover:bg-slate-600" data-speed="1.25">1.25x</button>
+                    </div>
                 </div>
             </div>
 
-            <!-- List of Mispronounced / Missed Words for Practice -->
-            <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-700/60 flex-grow flex flex-col">
-                <h4 class="font-semibold text-xs uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
-                    <i data-lucide="target" class="w-4 h-4 text-rose-500"></i>
-                    Targeted Word Practice
-                </h4>
+            <!-- Clickable Word Box -->
+            <div class="space-y-2">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Click any word below to hear correct pronunciation:</span>
+                <div id="wordContainer" class="p-5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 min-h-[120px] flex flex-wrap gap-2 items-center leading-relaxed text-base">
+                    <span class="text-slate-400 italic text-xs">Load an article or speak into the mic to start listening...</span>
+                </div>
+            </div>
 
-                <div id="mispronouncedList" class="flex-grow space-y-2 overflow-y-auto max-h-[320px] pr-1">
-                    <div id="emptyStateFeedback" class="text-center py-10 text-slate-400 text-xs">
-                        <i data-lucide="check-circle-2" class="w-8 h-8 mx-auto mb-2 stroke-1 opacity-50"></i>
-                        Start reading aloud to analyze your speech accuracy and pinpoint mispronounced words.
+            <!-- Read-Back Practice Section -->
+            <div class="pt-4 border-t border-slate-200 dark:border-slate-700 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="font-bold text-sm">Practice Read-Back & Verification</h3>
+                        <p class="text-xs text-slate-500">Read the article aloud to check your pronunciation accuracy.</p>
                     </div>
+                    <button id="btnPracticeRecord" onclick="togglePracticeRecording()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl shadow-sm flex items-center space-x-1.5 transition-all">
+                        <i id="practiceMicIcon" class="fa-solid fa-microphone"></i>
+                        <span id="practiceBtnLabel">Record My Reading</span>
+                    </button>
+                </div>
+
+                <!-- Comparison Result Container -->
+                <div id="practiceResults" class="hidden p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="font-bold">Accuracy Score:</span>
+                        <span id="scoreBadge" class="px-2.5 py-1 bg-green-100 text-green-800 font-bold rounded-full">0%</span>
+                    </div>
+                    <div id="comparisonBox" class="flex flex-wrap gap-1.5 text-sm"></div>
                 </div>
             </div>
 
@@ -272,397 +203,319 @@
 
     </main>
 
-    <!-- App Logic Script -->
+    <!-- JavaScript Application Logic -->
     <script>
-        // --- Sample Articles ---
-        const ARTICLES = {
-            tech: "Clean energy technology is expanding at an unprecedented pace worldwide. Solar power and wind turbines are becoming significantly more efficient and cost effective. Engineers are actively designing next generation batteries to store renewable energy for cloudy days.",
-            world: "Developing micro daily habits can lead to remarkable long term personal growth. Reading ten pages of a book or practicing a foreign language for fifteen minutes every morning builds strong mental discipline over time.",
-            science: "Oceanographers exploring deep ocean trenches have uncovered unique ecosystems thriving in complete darkness. Organisms residing near hydrothermal vents rely on chemical energy rather than sunlight to sustain life."
-        };
+        // State
+        let currentText = "";
+        let currentWords = [];
+        let speechSynth = window.speechSynthesis;
+        let speechUtterance = null;
+        let currentSpeed = 1.0;
+        let isDictating = false;
+        let isPracticing = false;
+        let dictationRecognition = null;
+        let practiceRecognition = null;
 
-        // --- App State ---
-        let currentText = ARTICLES.tech;
-        let originalWords = [];
-        let synth = window.speechSynthesis;
-        let recognition = null;
-        let isRecording = false;
-        let currentSpeechRate = 1.0;
-        let selectedVoice = null;
-        let voicesList = [];
-
-        // --- DOM Elements ---
-        const readingContainer = document.getElementById('readingContainer');
-        const articlePreset = document.getElementById('articlePreset');
-        const customInputGroup = document.getElementById('customInputGroup');
-        const customTextInput = document.getElementById('customTextInput');
-        const loadCustomBtn = document.getElementById('loadCustomBtn');
-        const wordCountLabel = document.getElementById('wordCountLabel');
-        
-        const voiceSelect = document.getElementById('voiceSelect');
-        const speedBtns = document.querySelectorAll('.speed-btn');
-        const playArticleBtn = document.getElementById('playArticleBtn');
-        const stopArticleBtn = document.getElementById('stopArticleBtn');
-
-        const micRecordBtn = document.getElementById('micRecordBtn');
-        const micRecordText = document.getElementById('micRecordText');
-        const micIconWrapper = document.getElementById('micIconWrapper');
-        const liveTranscriptBox = document.getElementById('liveTranscriptBox');
-        const liveTranscriptText = document.getElementById('liveTranscriptText');
-
-        const accuracyScore = document.getElementById('accuracyScore');
-        const correctWordsCount = document.getElementById('correctWordsCount');
-        const missedWordsCount = document.getElementById('missedWordsCount');
-        const mispronouncedList = document.getElementById('mispronouncedList');
-
-        const themeToggleBtn = document.getElementById('themeToggleBtn');
-        const themeIcon = document.getElementById('themeIcon');
-
-        // --- Initialization ---
         window.addEventListener('DOMContentLoaded', () => {
-            lucide.createIcons();
-            initTheme();
-            setupText(currentText);
-            initTTSVoices();
             initSpeechRecognition();
+            populateVoiceList();
+            if (speechSynth.onvoiceschanged !== undefined) {
+                speechSynth.onvoiceschanged = populateVoiceList;
+            }
+            document.getElementById('themeToggleBtn').addEventListener('click', toggleDarkMode);
+            
+            // Load default sample
+            loadArticle(1);
         });
 
-        // Dark/Light Theme Handler
-        function initTheme() {
-            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                document.documentElement.classList.add('dark');
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            const icon = document.getElementById('themeIcon');
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                icon.className = 'fa-solid fa-moon';
+            } else {
+                html.classList.add('dark');
+                icon.className = 'fa-solid fa-sun';
             }
-            themeToggleBtn.addEventListener('click', () => {
-                document.documentElement.classList.toggle('dark');
-                const isDark = document.documentElement.classList.contains('dark');
-                themeIcon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
-                lucide.createIcons();
+        }
+
+        // Voice Selector
+        function populateVoiceList() {
+            const voiceSelect = document.getElementById('voiceSelect');
+            if (!voiceSelect) return;
+            const voices = speechSynth.getVoices();
+            voiceSelect.innerHTML = '<option value="">Default Native Voice</option>';
+
+            voices.filter(v => v.lang.startsWith('en')).forEach((voice) => {
+                const option = document.createElement('option');
+                option.textContent = `${voice.name} (${voice.lang})`;
+                option.setAttribute('data-name', voice.name);
+                voiceSelect.appendChild(option);
             });
         }
 
-        // --- Render & Setup Text ---
-        function setupText(text) {
-            currentText = text;
-            // Clean and split words
-            const rawTokens = text.trim().split(/\s+/);
-            originalWords = rawTokens.map((rawWord, index) => {
-                const cleaned = rawWord.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-                return {
-                    id: index,
-                    raw: rawWord,
-                    cleaned: cleaned,
-                    status: 'unread' // 'unread', 'correct', 'incorrect'
-                };
-            });
+        // Source Modes Switcher
+        function setSourceMode(mode) {
+            const btnNews = document.getElementById('srcBtnNews');
+            const btnCustom = document.getElementById('srcBtnCustom');
+            const btnSpeech = document.getElementById('srcBtnSpeech');
+            const modeNews = document.getElementById('modeNews');
+            const dictationBar = document.getElementById('dictationBar');
 
-            wordCountLabel.textContent = `${originalWords.length} words`;
-            renderTextTokens();
-            resetStats();
-        }
+            btnNews.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-all';
+            btnCustom.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-all';
+            btnSpeech.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-all flex items-center space-x-1';
 
-        function renderTextTokens() {
-            readingContainer.innerHTML = '';
-            originalWords.forEach((wordObj) => {
-                const span = document.createElement('span');
-                span.className = `word-token word-${wordObj.status}`;
-                span.dataset.id = wordObj.id;
-                span.textContent = wordObj.raw + ' ';
-                
-                // Click individual word to listen
-                span.addEventListener('click', () => {
-                    speakSingleWord(wordObj.raw);
-                });
-
-                readingContainer.appendChild(span);
-            });
-        }
-
-        function resetStats() {
-            accuracyScore.textContent = '--%';
-            correctWordsCount.textContent = '0';
-            missedWordsCount.textContent = '0';
-            mispronouncedList.innerHTML = `
-                <div id="emptyStateFeedback" class="text-center py-10 text-slate-400 text-xs">
-                    <i data-lucide="check-circle-2" class="w-8 h-8 mx-auto mb-2 stroke-1 opacity-50"></i>
-                    Start reading aloud to analyze your speech accuracy and pinpoint mispronounced words.
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        // --- Text-To-Speech (Native Audio Reader) ---
-        function initTTSVoices() {
-            if (!('speechSynthesis' in window)) {
-                alert('Text-to-speech is not fully supported in this browser.');
-                return;
+            if (mode === 'news') {
+                btnNews.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 text-white shadow-sm transition-all';
+                modeNews.classList.remove('hidden');
+                dictationBar.classList.add('hidden');
+            } else if (mode === 'custom') {
+                btnCustom.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 text-white shadow-sm transition-all';
+                modeNews.classList.add('hidden');
+                dictationBar.classList.add('hidden');
+            } else if (mode === 'speech') {
+                btnSpeech.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 text-white shadow-sm transition-all flex items-center space-x-1';
+                modeNews.classList.add('hidden');
+                dictationBar.classList.remove('hidden');
             }
-
-            function populateVoices() {
-                voicesList = synth.getVoices().filter(v => v.lang.includes('en'));
-                voiceSelect.innerHTML = '';
-
-                if (voicesList.length === 0) {
-                    const opt = document.createElement('option');
-                    opt.textContent = 'Default English Voice';
-                    voiceSelect.appendChild(opt);
-                    return;
-                }
-
-                voicesList.forEach((voice, i) => {
-                    const option = document.createElement('option');
-                    option.value = i;
-                    option.textContent = `${voice.name} (${voice.lang})`;
-                    if (voice.default || voice.lang === 'en-US') option.selected = true;
-                    voiceSelect.appendChild(option);
-                });
-                selectedVoice = voicesList[voiceSelect.value] || null;
-            }
-
-            populateVoices();
-            if (speechSynthesis.onvoiceschanged !== undefined) {
-                speechSynthesis.onvoiceschanged = populateVoices;
-            }
-
-            voiceSelect.addEventListener('change', () => {
-                selectedVoice = voicesList[voiceSelect.value];
-            });
-
-            // Speed Buttons
-            speedBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    speedBtns.forEach(b => {
-                        b.classList.remove('border-brand-500', 'bg-brand-50', 'dark:bg-brand-900/30', 'text-brand-600', 'font-semibold');
-                        b.classList.add('border-slate-300', 'dark:border-slate-700');
-                    });
-                    btn.classList.add('border-brand-500', 'bg-brand-50', 'dark:bg-brand-900/30', 'text-brand-600', 'font-semibold');
-                    btn.classList.remove('border-slate-300', 'dark:border-slate-700');
-                    currentSpeechRate = parseFloat(btn.dataset.speed);
-                });
-            });
         }
 
-        function speakSingleWord(word) {
-            synth.cancel(); // Stop ongoing speech
-            const clean = word.replace(/[^a-zA-Z]/g, "");
-            const utterance = new SpeechSynthesisUtterance(clean);
-            if (selectedVoice) utterance.voice = selectedVoice;
-            utterance.rate = currentSpeechRate;
-            synth.speak(utterance);
-        }
-
-        function playFullArticle() {
-            synth.cancel();
-            if (isRecording) stopRecording();
-
-            const utterance = new SpeechSynthesisUtterance(currentText);
-            if (selectedVoice) utterance.voice = selectedVoice;
-            utterance.rate = currentSpeechRate;
-
-            playArticleBtn.classList.add('hidden');
-            stopArticleBtn.classList.remove('hidden');
-
-            utterance.onend = () => {
-                playArticleBtn.classList.remove('hidden');
-                stopArticleBtn.classList.add('hidden');
+        // Load Article Preset
+        function loadArticle(num) {
+            const articles = {
+                1: "Artificial intelligence algorithms are transforming modern technology rapidly.",
+                2: "Global market fluctuations require strategic adjustments by international businesses.",
+                3: "Meteorologists predict atmospheric observations will yield extraordinary discoveries."
             };
-
-            synth.speak(utterance);
+            document.getElementById('textInput').value = articles[num] || "";
+            processCurrentText();
         }
 
-        playArticleBtn.addEventListener('click', playFullArticle);
-        stopArticleBtn.addEventListener('click', () => {
-            synth.cancel();
-            playArticleBtn.classList.remove('hidden');
-            stopArticleBtn.classList.add('hidden');
-        });
-
-        // --- Speech Recognition (User Voice Practice) ---
+        // Speech Recognition Setup
         function initSpeechRecognition() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) return;
 
-            if (!SpeechRecognition) {
-                micRecordText.textContent = "Speech API Not Supported";
-                micRecordBtn.disabled = true;
-                micRecordBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            // Dictation Recognition
+            dictationRecognition = new SpeechRecognition();
+            dictationRecognition.continuous = true;
+            dictationRecognition.interimResults = true;
+            dictationRecognition.lang = 'en-US';
+
+            dictationRecognition.onresult = (event) => {
+                let transcript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    transcript += event.results[i][0].transcript;
+                }
+                document.getElementById('textInput').value = transcript;
+            };
+
+            dictationRecognition.onerror = (e) => stopDictation();
+            dictationRecognition.onend = () => { if (isDictating) stopDictation(); };
+
+            // Practice Recognition
+            practiceRecognition = new SpeechRecognition();
+            practiceRecognition.continuous = false;
+            practiceRecognition.interimResults = false;
+            practiceRecognition.lang = 'en-US';
+
+            practiceRecognition.onresult = (event) => {
+                evaluatePracticeSpeech(event.results[0][0].transcript);
+            };
+
+            practiceRecognition.onend = () => stopPracticeRecording();
+        }
+
+        // Dictation Toggle
+        function toggleDictation() {
+            if (!dictationRecognition) {
+                showStatus('Speech recognition not supported in this browser. Try Chrome or Edge.', 'error');
                 return;
             }
 
-            recognition = new SpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            recognition.lang = 'en-US';
-
-            recognition.onstart = () => {
-                isRecording = true;
-                micRecordText.textContent = "Stop & Check Score";
-                micRecordBtn.classList.remove('bg-white', 'text-brand-700');
-                micRecordBtn.classList.add('bg-rose-600', 'text-white', 'recording-pulse');
-                micIconWrapper.className = "w-8 h-8 rounded-full bg-rose-700 flex items-center justify-center text-white";
-                liveTranscriptBox.classList.remove('hidden');
-                liveTranscriptText.textContent = "Listening to your reading...";
-            };
-
-            recognition.onresult = (event) => {
-                let fullTranscript = '';
-                for (let i = 0; i < event.results.length; i++) {
-                    fullTranscript += event.results[i][0].transcript + ' ';
-                }
-                liveTranscriptText.textContent = fullTranscript;
-                evaluateSpeech(fullTranscript);
-            };
-
-            recognition.onerror = (event) => {
-                console.error('Speech recognition error:', event.error);
-                if (event.error === 'not-allowed') {
-                    alert('Microphone permission denied. Please allow microphone access to practice reading.');
-                }
-                stopRecording();
-            };
-
-            recognition.onend = () => {
-                if (isRecording) {
-                    // Auto-restart if continuous mode drops unexpectedly while user is active
-                    try { recognition.start(); } catch(e) {}
-                } else {
-                    micRecordText.textContent = "Start Reading Aloud";
-                    micRecordBtn.classList.remove('bg-rose-600', 'text-white', 'recording-pulse');
-                    micRecordBtn.classList.add('bg-white', 'text-brand-700');
-                    micIconWrapper.className = "w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-600";
-                }
-            };
-        }
-
-        function toggleRecording() {
-            synth.cancel(); // stop TTS if playing
-            if (!isRecording) {
-                // Reset word statuses
-                originalWords.forEach(w => w.status = 'unread');
-                renderTextTokens();
-                resetStats();
-                try {
-                    recognition.start();
-                } catch (err) {
-                    console.error("Start error", err);
-                }
+            if (!isDictating) {
+                dictationRecognition.start();
+                isDictating = true;
+                document.getElementById('btnDictate').classList.add('recording-pulse', 'bg-red-700');
+                document.getElementById('dictateBtnLabel').textContent = 'Listening... Tap to Stop';
+                showStatus('Dictation active. Read your newspaper aloud into the microphone.', 'info');
             } else {
-                stopRecording();
+                stopDictation();
             }
         }
 
-        function stopRecording() {
-            isRecording = false;
-            if (recognition) recognition.stop();
+        function stopDictation() {
+            if (dictationRecognition && isDictating) dictationRecognition.stop();
+            isDictating = false;
+            document.getElementById('btnDictate').classList.remove('recording-pulse', 'bg-red-700');
+            document.getElementById('dictateBtnLabel').textContent = 'Start Dictating';
+            showStatus('Dictation stopped.', 'info');
         }
 
-        micRecordBtn.addEventListener('click', toggleRecording);
+        // Process Text & Generate Interactive Word Badges
+        function processCurrentText() {
+            const raw = document.getElementById('textInput').value.trim();
+            if (!raw) {
+                showStatus('Please select or enter text first.', 'warning');
+                return;
+            }
 
-        // --- Speech Alignment Algorithm & Feedback ---
-        function evaluateSpeech(spokenText) {
-            const spokenTokens = spokenText.toLowerCase().replace(/[^a-zA-Z0-9\s]/g, "").trim().split(/\s+/);
-            
-            if (spokenTokens.length === 0 || spokenTokens[0] === "") return;
+            currentText = raw;
+            currentWords = raw.replace(/[^\w\s]/gi, '').split(/\s+/);
 
-            let spokenIndex = 0;
+            const container = document.getElementById('wordContainer');
+            container.innerHTML = '';
+
+            const wordsWithPunctuation = raw.split(' ');
+            wordsWithPunctuation.forEach((word) => {
+                const cleanWord = word.replace(/[^\w]/g, '').toLowerCase();
+                const btn = document.createElement('button');
+                btn.className = 'word-badge px-2.5 py-1 bg-white dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg font-medium shadow-xs flex items-center space-x-1 cursor-pointer';
+                btn.onclick = () => speakWord(cleanWord);
+
+                btn.innerHTML = `
+                    <span>${word}</span>
+                    <i class="fa-solid fa-volume-low text-[10px] text-brand-500"></i>
+                `;
+                container.appendChild(btn);
+            });
+
+            document.getElementById('practiceResults').classList.add('hidden');
+            showStatus('Loaded! Click any word to hear its pronunciation.', 'success');
+        }
+
+        // Audio Playback Helpers
+        function speakWord(word) {
+            stopSpeech();
+            const utter = new SpeechSynthesisUtterance(word);
+            utter.rate = currentSpeed;
+            applySelectedVoice(utter);
+            speechSynth.speak(utter);
+        }
+
+        function toggleFullSpeech() {
+            if (speechSynth.speaking) {
+                stopSpeech();
+                return;
+            }
+            if (!currentText) return;
+
+            speechUtterance = new SpeechSynthesisUtterance(currentText);
+            speechUtterance.rate = currentSpeed;
+            applySelectedVoice(speechUtterance);
+
+            speechUtterance.onstart = () => {
+                document.getElementById('playIcon').className = 'fa-solid fa-pause';
+                document.getElementById('playBtnText').textContent = 'Pause Reading';
+            };
+
+            speechUtterance.onend = () => resetPlayButton();
+            speechSynth.speak(speechUtterance);
+        }
+
+        function stopSpeech() {
+            if (speechSynth) speechSynth.cancel();
+            resetPlayButton();
+        }
+
+        function resetPlayButton() {
+            document.getElementById('playIcon').className = 'fa-solid fa-volume-high';
+            document.getElementById('playBtnText').textContent = 'Read Full Article';
+        }
+
+        function applySelectedVoice(utterance) {
+            const voiceSelect = document.getElementById('voiceSelect');
+            const selectedOption = voiceSelect.selectedOptions[0];
+            if (selectedOption && selectedOption.getAttribute('data-name')) {
+                const name = selectedOption.getAttribute('data-name');
+                const matched = speechSynth.getVoices().find(v => v.name === name);
+                if (matched) utterance.voice = matched;
+            }
+        }
+
+        function setSpeed(speed) {
+            currentSpeed = speed;
+            document.querySelectorAll('.speed-btn').forEach(btn => {
+                if (parseFloat(btn.getAttribute('data-speed')) === speed) {
+                    btn.className = 'speed-btn px-2 py-1 rounded-lg bg-white dark:bg-slate-600 shadow-sm';
+                } else {
+                    btn.className = 'speed-btn px-2 py-1 rounded-lg hover:bg-white dark:hover:bg-slate-600';
+                }
+            });
+        }
+
+        // Practice Verification Logic
+        function togglePracticeRecording() {
+            if (!practiceRecognition) {
+                showStatus('Speech recognition unavailable.', 'error');
+                return;
+            }
+
+            if (!isPracticing) {
+                practiceRecognition.start();
+                isPracticing = true;
+                document.getElementById('btnPracticeRecord').classList.add('recording-pulse', 'bg-red-700');
+                document.getElementById('practiceBtnLabel').textContent = 'Listening... Speak Now';
+            } else {
+                stopPracticeRecording();
+            }
+        }
+
+        function stopPracticeRecording() {
+            if (practiceRecognition && isPracticing) practiceRecognition.stop();
+            isPracticing = false;
+            document.getElementById('btnPracticeRecord').classList.remove('recording-pulse', 'bg-red-700');
+            document.getElementById('practiceBtnLabel').textContent = 'Record My Reading';
+        }
+
+        function evaluatePracticeSpeech(spokenText) {
+            const spokenWords = spokenText.toLowerCase().replace(/[^\w\s]/gi, '').split(/\s+/);
+            const targetsClean = currentWords.map(w => w.toLowerCase());
+            const box = document.getElementById('comparisonBox');
+            box.innerHTML = '';
+
             let correctCount = 0;
-            let missedWords = [];
 
-            // Simple sequence alignment
-            originalWords.forEach((wordObj) => {
-                const cleanTarget = wordObj.cleaned;
+            targetsClean.forEach((targetWord, idx) => {
+                const originalWord = currentWords[idx] || targetWord;
+                const badge = document.createElement('span');
 
-                // Look for word in a small search window of spoken tokens to allow slight stutters
-                let matched = false;
-                for (let i = spokenIndex; i < Math.min(spokenIndex + 4, spokenTokens.length); i++) {
-                    if (spokenTokens[i] === cleanTarget) {
-                        matched = true;
-                        spokenIndex = i + 1;
-                        break;
-                    }
-                }
-
-                if (matched) {
-                    wordObj.status = 'correct';
+                if (spokenWords.includes(targetWord)) {
                     correctCount++;
+                    badge.className = 'px-2 py-0.5 bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 rounded border border-green-300 font-medium';
+                    badge.textContent = originalWord;
                 } else {
-                    // Check if user has already spoken past this word index
-                    if (spokenIndex < spokenTokens.length) {
-                        wordObj.status = 'incorrect';
-                        missedWords.push(wordObj);
-                    } else {
-                        wordObj.status = 'unread';
-                    }
+                    badge.className = 'px-2 py-0.5 bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 rounded border border-red-300 font-medium line-through';
+                    badge.textContent = originalWord;
                 }
+                box.appendChild(badge);
             });
 
-            renderTextTokens();
+            const percentage = targetsClean.length > 0 ? Math.round((correctCount / targetsClean.length) * 100) : 0;
+            const badge = document.getElementById('scoreBadge');
+            badge.textContent = `${percentage}% Accuracy`;
 
-            // Calculate Score based on attempted words
-            const attemptedTotal = originalWords.filter(w => w.status !== 'unread').length;
-            const scorePercent = attemptedTotal > 0 ? Math.round((correctCount / attemptedTotal) * 100) : 0;
-
-            accuracyScore.textContent = `${scorePercent}%`;
-            correctWordsCount.textContent = correctCount;
-            missedWordsCount.textContent = missedWords.length;
-
-            updateMispronouncedList(missedWords);
+            document.getElementById('practiceResults').classList.remove('hidden');
         }
 
-        function updateMispronouncedList(missedWords) {
-            if (missedWords.length === 0) {
-                mispronouncedList.innerHTML = `
-                    <div class="text-center py-8 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
-                        <i data-lucide="sparkles" class="w-6 h-6 mx-auto mb-1"></i>
-                        Great job! No mispronounced or skipped words detected so far.
-                    </div>
-                `;
-                lucide.createIcons();
-                return;
-            }
+        function showStatus(message, type = 'info') {
+            const alertBox = document.getElementById('statusAlert');
+            const msg = document.getElementById('statusMessage');
+            alertBox.classList.remove('hidden', 'bg-blue-50', 'bg-red-50', 'bg-green-50', 'bg-amber-50', 'text-blue-800', 'text-red-800', 'text-green-800', 'text-amber-800');
 
-            mispronouncedList.innerHTML = '';
-            missedWords.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'flex items-center justify-between p-2.5 bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-900/40 rounded-xl text-xs';
-                card.innerHTML = `
-                    <div class="flex items-center space-x-2">
-                        <span class="font-semibold text-slate-800 dark:text-slate-200 text-sm">${item.raw}</span>
-                    </div>
-                    <button class="listen-word-btn flex items-center gap-1 text-brand-600 dark:text-brand-400 hover:text-brand-700 bg-white dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 font-medium transition shadow-sm" data-word="${item.raw}">
-                        <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
-                        <span>Listen</span>
-                    </button>
-                `;
+            if (type === 'error') alertBox.classList.add('bg-red-50', 'text-red-800', 'border-red-200');
+            else if (type === 'success') alertBox.classList.add('bg-green-50', 'text-green-800', 'border-green-200');
+            else if (type === 'warning') alertBox.classList.add('bg-amber-50', 'text-amber-800', 'border-amber-200');
+            else alertBox.classList.add('bg-blue-50', 'text-blue-800', 'border-blue-200');
 
-                card.querySelector('.listen-word-btn').addEventListener('click', () => {
-                    speakSingleWord(item.raw);
-                });
-
-                mispronouncedList.appendChild(card);
-            });
-            lucide.createIcons();
+            msg.textContent = message;
         }
 
-        // --- Article Selection Controls ---
-        articlePreset.addEventListener('change', (e) => {
-            const val = e.target.value;
-            if (isRecording) stopRecording();
-            synth.cancel();
-
-            if (val === 'custom') {
-                customInputGroup.classList.remove('hidden');
-            } else {
-                customInputGroup.classList.add('hidden');
-                setupText(ARTICLES[val]);
-            }
-        });
-
-        loadCustomBtn.addEventListener('click', () => {
-            const customVal = customTextInput.value.trim();
-            if (customVal.length > 0) {
-                setupText(customVal);
-            }
-        });
-
+        function dismissStatus() {
+            document.getElementById('statusAlert').classList.add('hidden');
+        }
     </script>
 </body>
 </html>
